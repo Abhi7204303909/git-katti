@@ -1,454 +1,498 @@
 'use strict';
 
-// const { filter } = require("lodash-es");
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+// BANKIST APP
 
-class Workout{
-     date=new Date();
-     id=(Date.now()+'').slice(-10)
-     clicks=0;
-    constructor(coords,distance,duration){
-        this.coords=coords;//[lat,lang]
-        this.distance=distance;//in km
-        this.duration=duration;//in min
-       
-        // this.click();
-    }
-    //type property not accesible for workout object
-    //but as we called the methodes in the child class the object created of child class can acces it
-    //through scope chain
-    _setDescription(){
-        // prettier-ignore
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-         'September', 'October', 'November', 'December'];
-         this.description=`${this.type[0].toUpperCase()}${this.type.slice(1)} on ${months[this.date.getMonth()]} ${this.date.getDate()}`
-                     }
-    click(){
-    
-        this.clicks++;
-    }
+/////////////////////////////////////////////////
+// Data
+
+// DIFFERENT DATA! Contains movement dates, currency and locale
+
+const account1 = {
+  owner: 'Abhishek Katti',
+  movements: [200, 455.23, -306.5, 25000, -642.21, -133.9, 79.97, 1300],
+  interestRate: 1.2, // %
+  pin: 1111,
+
+  movementsDates: [
+    '2021-01-30T21:31:17.178Z',
+    '2021-01-29T07:42:02.383Z',
+    '2021-01-28T09:15:04.904Z',
+    '2020-04-01T10:17:24.185Z',
+    '2020-05-08T14:11:59.604Z',
+    '2020-05-27T17:01:17.194Z',
+    '2020-07-11T23:36:17.929Z',
+    '2020-07-12T10:51:36.790Z',
+  ],
+  currency: 'EUR',
+  locale: 'pt-PT', // de-DE
+};
+
+const account2 = {
+  owner: 'Apurv Patwardhan',
+  movements: [5000, 3400, -150, -790, -3210, -1000, 8500, -30],
+  interestRate: 1.5,
+  pin: 2222,
+
+  movementsDates: [
+    '2019-11-01T13:15:33.035Z',
+    '2019-11-30T09:48:16.867Z',
+    '2019-12-25T06:04:23.907Z',
+    '2020-01-25T14:18:46.235Z',
+    '2020-02-05T16:33:06.386Z',
+    '2020-04-10T14:43:26.374Z',
+    '2020-06-25T18:49:59.371Z',
+    '2020-07-26T12:01:20.894Z',
+  ],
+  currency: 'USD',
+  locale: 'en-US',
+};
+
+const accounts = [account1, account2];
+
+/////////////////////////////////////////////////
+// Elements
+const labelWelcome = document.querySelector('.welcome');
+const labelDate = document.querySelector('.date');
+const labelBalance = document.querySelector('.balance__value');
+const labelSumIn = document.querySelector('.summary__value--in');
+const labelSumOut = document.querySelector('.summary__value--out');
+const labelSumInterest = document.querySelector('.summary__value--interest');
+const labelTimer = document.querySelector('.timer');
+
+const containerApp = document.querySelector('.app');
+const containerMovements = document.querySelector('.movements');
+
+const btnLogin = document.querySelector('.login__btn');
+const btnTransfer = document.querySelector('.form__btn--transfer');
+const btnLoan = document.querySelector('.form__btn--loan');
+const btnClose = document.querySelector('.form__btn--close');
+const btnSort = document.querySelector('.btn--sort');
+
+const inputLoginUsername = document.querySelector('.login__input--user');
+const inputLoginPin = document.querySelector('.login__input--pin');
+const inputTransferTo = document.querySelector('.form__input--to');
+const inputTransferAmount = document.querySelector('.form__input--amount');
+const inputLoanAmount = document.querySelector('.form__input--loan-amount');
+const inputCloseUsername = document.querySelector('.form__input--user');
+const inputClosePin = document.querySelector('.form__input--pin');
+
+/////////////////////////////////////////////////
+// Functions
+const formatDate=function(date,locale){
+  const calcDaysPassed=(date1,date2)=>Math.round(Math.abs(date2-date1)/(1000*60*60*24));
+  const daysPassed=calcDaysPassed(new Date(),date);
+  console.log("daysss",daysPassed);
+  if(daysPassed==0)return 'Today';
+  if(daysPassed==1) return 'Yestarday';
+  if(daysPassed<=7) return `${daysPassed} days ago`;
+  else
+  {/*
+  const day=`${date.getDate()}`.padStart(2,0);
+  const month=`${date.getMonth()+1}`.padStart(2,0);
+  const year=`${date.getFullYear()}`;
+  return`${day}/${month}/${year}`;*/
+  return new Intl.DateTimeFormat(locale).format(date);
+  }
 }
-class Running extends Workout{
-    type='running'
-    constructor(coords,distance,duration,cadence)
-    {
-        super(coords,distance,duration);
-        this.cadence=cadence
-        this.calcPace();//immediatly called when the object is created
-        this._setDescription();
-    }
-    calcPace(){
-        //min/km
-        this.pace=this.duration/this.distance;
-        return this.pace;
-    }
+const formatNumber=function(acc,num){
+ const  options={
+    style:'currency',
+    currency:acc.currency,
+  };
+  console.log(new Intl.NumberFormat(acc.locale,options).format(num));
+  return new Intl.NumberFormat(acc.locale,options).format(num);
 }
-class Cycling extends Workout{
-    type='cycling';
-    constructor(coords,distance,duration,elevationGain){
-        super(coords,distance,duration);
-        this.elevationGain=elevationGain;
-        this.calcSpeed();
-        this._setDescription();
-    }
-    calcSpeed(){
-        //km/h
-        this.speed=this.distance/(this.duration/60);
-        return this.speed;
-    }
-}
-// const run1=new Running([39,-12],5.2,24,178);
-// const cycling1=new Cycling([39,-12],27,95,523);
-// console.log(run1,cycling1);
-/////////////////////////////////////////////////////
-//------------------------------------------Application Architecture------------------------------------------
-const form = document.querySelector('.form');
-const containerWorkouts = document.querySelector('.workouts');
-const inputType = document.querySelector('.form__input--type');
-const inputDistance = document.querySelector('.form__input--distance');
-const inputDuration = document.querySelector('.form__input--duration');
-const inputCadence = document.querySelector('.form__input--cadence');
-const inputElevation = document.querySelector('.form__input--elevation');
-let sortedState=false;
 
-class App{
-    #map;
-    #mapEvent;
-    _workouts=[];
-    #mapZoomLevel=13;
+const displayMovements = function (acc, sort = false) {
+  containerMovements.innerHTML = '';
 
-    constructor(){
-        //Get users position
-        this._getPosition();
-        //Get data from local storage
-        this._getLocalStorage();
-       console.log(this);
-        //---------------Displaying marker after user submits the form Feature---------
-      form.addEventListener('submit',this._newWorkOut.bind(this));
-      inputType.addEventListener('change',this._toggleElevationField);//toggle running or cycling
-      containerWorkouts.addEventListener('click',this._moveToPopup.bind(this));
-      this.edit();
-      this.deleteWorkout();
-      this._removeAll();
-      this._sortByDistance()
-     
-    };
-    _getPosition(){
-        //Geolocation API
-        //arguments are
-        //two call back functions 1.which will be called on succes after getting current
-        //coordinates of the user
-        //2.Error callback while getting the current position
-        if(navigator.geolocation){
-            // console.log(this);
-            navigator.geolocation.getCurrentPosition(this._loadMap.bind(this), function() {
-                alert('Could not get your position')
-            });
-            }
-    }
-    _loadMap(position){
-        
-           const {latitude}=position.coords;//object destructering
-           const {longitude}=position.coords;
-        //    console.log(latitude,longitude);
-        //    console.log(`https://www.google.com/maps/@${latitude},${longitude}z`);
-           const coords=[latitude,longitude];
-           this.#map = L.map('map').setView(coords,this.#mapZoomLevel);//string passed to map() function is('map') must be the id name of the element in html where map is displayed
-        //   console.log(map);
-        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(this.#map);
-        // console.log(this);
-        //similar to event listner map.on() is a bulit in leaflet method which helps in adding event listners on map
-        //refer leaflet ddocumentation for more information
-        //bindPopup()method accepts options as arguments refer bindPopup() method on leaflet documentation
-        ///Handling clicks on map   
-        this.#map.on('click',this._showForm.bind(this));
-        //this is done here istead of
-        this._workouts.forEach(work=>{
-            this._renderWorkoutMarker(work);
-        })     
-        
-    }
-    _showForm(mapE){
-          console.log(this);
-            this.#mapEvent=mapE;   
-            form.classList.remove('hidden');
-               inputDistance.focus();//blink cursor when user clicks on the map
-            }
-    _hideForm(){
-        inputDistance.value=inputCadence.value=inputElevation.value=inputDuration.value='';
-         form.style.display='none';
-        form.classList.add('hidden');
-       // form.style.display='grid'
-        setInterval(()=>{form.style.display='grid'},1000);
-        
-    }
-    _toggleElevationField(){
-    
-            inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
-            inputCadence.closest('.form__row').classList.toggle('form__row--hidden');        
-    }
-    _newWorkOut(e){
-        const validInputs=function(...inputs){
-            //Check if data is valid (Gaurd class)
-            return inputs.every(inp=>Number.isFinite(inp));
-            
-        }
-        const allPositive=function(...inputs){ return inputs.every(ip=>ip>0)};
-        e.preventDefault()//preventing default behaviour of form
-        // console.log(this.#mapEvent);
-        //Get data from form
-       const type=inputType.value;
-       const distance= +inputDistance.value;
-       const duration= +inputDuration.value;
-       const {lat,lng}=this.#mapEvent.latlng;
-    //    console.log(lat,lng);
-       let workout;
-        
-        //If activity running,create running object
-         if(type==='running'){
-             const cadence= +inputCadence.value;
-             if(!validInputs(distance,duration,cadence) || !allPositive(distance,duration,cadence)){
-                 return alert('Inputs have to be positive numbers')
-             };
-             workout=new Running([lat,lng],distance,duration,cadence);
-            
+  const movs = sort ? acc.movements.slice().sort((a, b) => a - b) :acc.movements;
 
-         }
-        //If activity cycling,create cycling Object
-        if(type==='cycling'){
-            const elevation= +inputElevation.value;
-            if(!validInputs(distance,duration,elevation) || !allPositive(distance,duration)){
-                return alert('Inputs have to be positive numbers')
-            };
-            workout=new Cycling([lat,lng],distance,duration,elevation);
-        }
-        
-        //Add new Object to workout array
-        this._workouts.push(workout);
-        // console.log(workout);
-        //Render workout on map as marker
-        this._renderWorkoutMarker(workout);
-      
-     //Render workout on list
-        this._renderWorkout(workout);
-        //Hide form +clearing input feilds
-        this._hideForm();
+  movs.forEach(function (mov, i) {
+    const type = mov > 0 ? 'deposit' : 'withdrawal';
+    const date=new Date(acc.movementsDates[i]);
+    const displayDate=formatDate(date,acc.locale);
+    const formatedNum=formatNumber(acc,mov.toFixed(2))
+    const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--${type}">${
+      i + 1
+    } ${type}</div>
+    <div class="movements__date">${displayDate}</div>
+        <div class="movements__value">${formatedNum}</div>
+      </div>
+    `;
 
-        //Set local storage to all workouts
-        this._setLocalStorage();
-       
-   }
-   _renderWorkoutMarker(workout)
-        { //console.log(workout.distance);
-        L.marker(workout.coords).addTo(this.#map)
-        .bindPopup(L.popup({maxWidth:250,minWidth:100,autoClose:false,
-        closeOnClick:false,className:`${workout.type}-popup ` }))
-        .setPopupContent(`${workout.type==='running'?'🏃':'🚴'} ${workout.description}`) 
-        .openPopup();
-       }
-       _renderWorkout(workout){
-        let html=`
-        <div class="change">
-        <button class="button--edit-workout">Edit</button>
-        <button class="button--delete-workout">Delete</button>
-        </div>
-        <li class="workout workout--${workout.type}" data-id=${workout.id}>
-        <h2 class="workout__title">${workout.description}</h2>
-        <div class="workout__details">
-            
-            <span class="workout__icon">${workout.type==='running'?'🏃':'🚴'}
-            </span>
-            <span class="workout__value">${workout.distance}</span>
-            <span class="workout__unit">km</span>
-        </div>
-        <div class="workout__details">
-            <span class="workout__icon">⏱</span>
-            <span class="workout__value">${workout.duration}</span>
-            <span class="workout__unit">min</span>
-        </div>
-        `
-        if(workout.type==='running'){
-            html+=`
-            <div class="workout__details">
-                <span class="workout__icon">⚡️</span>
-                <span class="workout__value">${workout.pace.toFixed(1)}</span>
-                <span class="workout__unit">min/km</span>
-            </div>
-            <div class="workout__details">
-                <span class="workout__icon">🦶🏼</span>
-                <span class="workout__value">${workout.cadence}</span>
-                <span class="workout__unit">spm</span>
-            </div>
-            </li>
-            `;
-            
-        }         
-        if(workout.type==='cycling'){
-            html+=`  
-            <div class="workout__details">
-                <span class="workout__icon">⚡️</span>
-                <span class="workout__value">${workout.speed.toFixed(1)}</span>
-                <span class="workout__unit">km/h</span>
-           </div>
-           <div class="workout__details">
-                <span class="workout__icon">⛰</span>
-                <span class="workout__value">${workout.elevationGain}</span>
-                <span class="workout__unit">m</span>
-           </div>
-           </li>
-           `;
-        }
-        form.insertAdjacentHTML('afterend',html);
-       }
-       _moveToPopup(e){
-           const workoutEl=e.target.closest('.workout');//common parent
-        //    console.log(workoutEl);
-           if(!workoutEl)return; //Gaurd Clause
-           const workout=this._workouts.find(work=>work.id===workoutEl.dataset.id);
-        //    console.log(workout);
-           this.#map.setView(workout.coords,this.#mapZoomLevel,{animate:true,
-           pan:{
-               duration:1
-           }}); //3rd parameter is a option for more refer leaflet documentation;
-        //    console.log();
-        // workout.click();
-       }
-       _setLocalStorage(){
-           //JSON.stringify(this);->converts object to string
-           //local storage should not be used for the large amount of data
-           localStorage.setItem('workouts',JSON.stringify(this._workouts));//local stoarge API in the browser
-       }
-       _getLocalStorage(){
-           const data=JSON.parse(localStorage.getItem('workouts'));//JSON.parse converts string back to original object
-        //    console.log(data);
-           if(!data)return
-           this._workouts=data;//restoring data sccross multiple reloads
-           this._workouts.forEach(work=>{
-               this._renderWorkout(work);
+    containerMovements.insertAdjacentHTML('afterbegin', html);
+  });
+};
 
-           })
-        }
-        reset(){
-            localStorage.removeItem('workouts');
-            location.reload();//location is the big object which hase lot of methodes of browser 
-            //here it helps to reload the page
-        }
-        //-------------New features-----------
-        _editHandler(e){
-            let editWorkout;
-              if(e.target.classList.contains('button--edit-workout'))
-                {console.log("targetel",e.target.parentElement.nextElementSibling);
-                console.log(this);
-                this._showForm();
-                const sib=e.target.parentElement.nextElementSibling;
-                const targetId=sib.dataset.id
-                const res=JSON.parse(localStorage.getItem('workouts'));
-                // const inputType=edit[0].parentElement.nextElementSibling.children[0].textContent.split(" ")[0];
-               
-                let editPos;
-                res.forEach(el=>{
-                    if(el.id===targetId)editPos=el.coords;
-                })
-                const editFunc=function(){
-                    //e.preventDefault();
-                    const inputtype=inputType.value;
-                    const newDistance=+inputDistance.value;
-                    const newDuration=+inputDuration.value;
-                    const newCadence=+inputCadence.value;
-                    const newElevation=+inputElevation.value;
-                  console.log("i/ptype",inputtype);
-                    if(inputtype==='running')editWorkout=new Running(editPos,newDistance,newDuration,newCadence);
-                    else{
-                        editWorkout=new Cycling(editPos,newDistance,newDuration,newElevation);
-                    }
-                    // res.forEach((el,i)=>{
-                    //     if(el.id===targetId)res[i]=editWorkout;
-                    // })
-                    for(let i=0;i<res.length;i++){
-                        if(res[i].id===targetId)res[i]=editWorkout;
-                    }
-                    console.log("newres",res);
-                    console.log("this handler",this);
-                    //this._renderSpinner()
-                    
-                    this._hideForm();
-                    this._renderWorkout(editWorkout);
-                   
-                    localStorage.removeItem('workouts');
-                    //form.style.display='grid'
-                    location.reload();
-                    localStorage.setItem('workouts',JSON.stringify(res))
-                    // app._setLocalStorage();
-                    
-                 
-                    
-                }
-                form.addEventListener('submit',editFunc.bind(this));}
-                
-            
-        }
-        edit(){
-        
-           // console.log("edit",this);
-            const edit=document.querySelector('.workouts');
-            console.log("workouts",this._workouts);
-            // console.log(edit[0].parentElement.nextElementSibling);
-            
-             console.log(inputType.value);
-            
-             
-                edit.addEventListener('click',this._editHandler.bind(this));
-           
-        }
+const calcDisplayBalance = function (acc) {
 
-        _deleteHandler(e){
-              
-            if(e.target.classList.contains('button--delete-workout'))
-            { //s e.preventDefault();
-                const res=JSON.parse(localStorage.getItem('workouts'));
-             console.log(e.target);
-                console.log("clicked");
-             const sib=e.target.parentElement.nextElementSibling;
-             console.log(sib);
-             const targetId=sib.dataset.id;
-             
-             res.forEach((el,i)=>{
-                 if(el.id===targetId)res.splice(i,1);
-                 
-             })
-             console.log(res);
-             localStorage.removeItem('workouts');
-             localStorage.setItem('workouts',JSON.stringify(res));
-             //form.style.display='grid'
-             location.reload();
-       
-         }
-        }
-        deleteWorkout(){
-            const del=document.querySelector('.workouts');
-         
-          console.log("delellll",del);
-    
-            del.addEventListener('click',this._deleteHandler.bind(this));
-                //app._hideForm();
-               // console.log("clicked");
-               
-               
-               //location.reload();
-        
-}
- _removeAll(){
-    const btnRemove=document.querySelector('.btn--remove') 
-    btnRemove.addEventListener('click',function(){
-        localStorage.removeItem('workouts');
-        location.reload();
+  acc.balance = acc.movements.reduce((acc, mov) => acc + mov, 0);
+  const formatedNum=formatNumber(acc,acc.balance.toFixed(2));
+  labelBalance.textContent = `${formatedNum}`;
+};
+
+const calcDisplaySummary = function (acc) {
+  const incomes = acc.movements
+    .filter(mov => mov > 0)
+    .reduce((acc, mov) => acc + mov, 0);
+    const formatedin=formatNumber(acc,incomes.toFixed(2));
+  labelSumIn.textContent = `${formatedin}`;
+
+  const out = acc.movements
+    .filter(mov => mov < 0)
+    .reduce((acc, mov) => acc + mov, 0);
+    const formatedout=formatNumber(acc,Math.abs(out).toFixed(2));
+  labelSumOut.textContent = `${formatedout}`;
+
+  const interest = acc.movements
+    .filter(mov => mov > 0)
+    .map(deposit => (deposit * acc.interestRate) / 100)
+    .filter((int, i, arr) => {
+      // console.log(arr);
+      return int >= 1;
     })
-    
- }
- _sortHandler(){
- 
-    const sortWork=JSON.parse(localStorage.getItem('workouts'));
-   // const temp=normalWork.slice();
-   // const sortWork=normalWork.slice();
-    if(sortedState===false){
-        console.log(sortedState);
-        sortedState=true;
-        sortWork.sort(((a,b)=>a.distance-b.distance));
-        localStorage.removeItem('workouts');
-        localStorage.setItem('workouts',JSON.stringify(sortWork));
-        location.reload();
-       // document.querySelector('.workouts').innerHTML='';
-        //this._renderWorkout(sortWork);
+    .reduce((acc, int) => acc + int, 0);
+  labelSumInterest.textContent = `${interest.toFixed(2)}€`;
+};
 
+const createUsernames = function (accs) {
+  accs.forEach(function (acc) {
+    acc.username = acc.owner
+      .toLowerCase()
+      .split(' ')
+      .map(name => name[0])
+      .join('');
+  });
+};
+createUsernames(accounts);
+
+const updateUI = function (acc) {
+  // Display movements
+  displayMovements(acc);
+
+  // Display balance
+  calcDisplayBalance(acc);
+
+  // Display summary
+  calcDisplaySummary(acc);
+};
+let time=120;
+const startLogoutTimer=function(){
+  const tick=function(){
+    //labelTimer.textContent=time;
+    let time_min=String(Math.trunc(time/60)).padStart(2,'0');
+   let time_sec=String(Math.trunc(time%60)).padStart(2,'0');
+    
+    labelTimer.textContent=`${time_min}:${time_sec}`;
+    
+    if(time===0){
+      clearInterval(timer);
+      labelWelcome.textContent='Login to get started';
+      containerApp.style.opacity=0;
     }
-    else{
-        //e.preventDefault();
-        console.log("normalWOooork",typeof normalWork);
-        console.log(sortedState);
-        sortedState=false;
-        localStorage.removeItem('workouts');
-        localStorage.setItem('workouts',JSON.stringify(this._workouts));
-        location.reload();
-        //document.querySelector('.workouts').innerHTML='';
-        //this._renderWorkout(normalWork);
-    }
- //  setTimeout(()=>location.reload(),5000);
-    console.log(normalWork);
-    console.log(sortWork);
-    
-    console.log("aftersorting",sortWork);
-    
-
- }
- _sortByDistance(){
+    time--; 
+  }
+  //set time to 5min
  
-    const sortBtn=document.querySelector('.btn--sort');
-     sortBtn.addEventListener('click',this._sortHandler.bind(this));
+  
+  tick();
+  timer=setInterval(tick,1000);
+  //the problem is for the second time login the first time loged timer will also be 
+  //running leading to un wanted counter timer which can be solved by checking whether there exists a
+  //timer already if yes clear it and start new timer
 
- }
+  return timer;
+  //call the time for every second
+ 
 }
-const app=new App();
-//app._sortByDistance();
 
-const normalWork=app._workouts.slice();
+///////////////////////////////////////
+// Event handlers
+let currentAccount,timer;
+
+
+/*
+const no=new Date();
+const day=`${no.getDate()}`.padStart(2,0);
+const month=`${no.getMonth()}`.padStart(2,0);
+const year=`${no.getFullYear()}`;
+const hour=`${no.getHours()}`.padStart(2,0);
+const minutes=`${no.getMinutes()}`.padStart(2,0);
+console.log(`${day}/${month+1}/${year}`);
+labelDate.textContent=`${day}/${month+1}/${year}, ${hour}
+:${minutes}`*/
+btnLogin.addEventListener('click', function (e) {
+  // Prevent form from submitting
+  e.preventDefault();
+ 
+  currentAccount = accounts.find(
+    acc => acc.username === inputLoginUsername.value
+  );
+  console.log(currentAccount);
+
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    // Display UI and message
+    labelWelcome.textContent = `Welcome back, ${
+      currentAccount.owner.split(' ')[0]
+    }`;
+    containerApp.style.opacity = 100;
+
+    // Clear input fields
+    inputLoginUsername.value = inputLoginPin.value = '';
+    inputLoginPin.blur();
+      //internationalization API
+  const no=new Date();
+  const options={hour:'numeric',
+  minute:'numeric',
+  day:'numeric',
+  month:'numeric',
+  year:'numeric',
+  //weekday:'short',
+   }
+  //automatically get the locality from users browser gets the language
+  const locale=navigator.language;
+  labelDate.textContent=new Intl.DateTimeFormat(currentAccount.locale,options).format(no);
+  //start logout timer
+  if(timer)clearInterval(timer);
+  timer=startLogoutTimer();
+  console.log('aasddd',timer);
+  // Update UI
+    updateUI(currentAccount);
+  }
+});
+
+btnTransfer.addEventListener('click', function (e) {
+  e.preventDefault();
+  const amount = Number(inputTransferAmount.value);
+  const receiverAcc = accounts.find(
+    acc => acc.username === inputTransferTo.value
+  );
+  inputTransferAmount.value = inputTransferTo.value = '';
+
+  if (
+    amount > 0 &&
+    receiverAcc &&
+    currentAccount.balance >= amount &&
+    receiverAcc?.username !== currentAccount.username
+  ) {
+    // Doing the transfer
+    currentAccount.movements.push(-amount);
+    receiverAcc.movements.push(amount);
+    //Add dates to the ui
+    currentAccount.movementsDates.push(new Date().toISOString());
+    receiverAcc.movementsDates.push(new Date().toISOString());
+    // Update UI
+    updateUI(currentAccount);
+    //resetting the timer
+    if(timer)clearInterval(timer);
+    time=120
+    timer=startLogoutTimer()
+  }
+});
+
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const amount = Math.floor(inputLoanAmount.value);
+
+  if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
+    // Add movement
+    //currentAccount.movements.push(amount);
+   // currentAccount.movementsDates.push(new Date().toISOString());
+    // Update UI
+   
+    //setting up timer for loan
+    setTimeout( (a,b)=>{
+      a.movements.push(b);
+      a.movementsDates.push(new Date().toISOString());
+      updateUI(a);
+    },5000,currentAccount,amount);
+   
+  }
+  inputLoanAmount.value = '';
+  //resetting the timer
+  if(timer)clearInterval(timer);
+  time=120;
+  timer=startLogoutTimer()
+});
+
+btnClose.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  if (
+    inputCloseUsername.value === currentAccount.username &&
+    Number(inputClosePin.value) === currentAccount.pin
+  ) {
+    const index = accounts.findIndex(
+      acc => acc.username === currentAccount.username
+    );
+    console.log(index);
+    // .indexOf(23)
+
+    // Delete account
+    accounts.splice(index, 1);
+
+    // Hide UI
+    containerApp.style.opacity = 0;
+  }
+
+  inputCloseUsername.value = inputClosePin.value = '';
+});
+
+let sorted = false;
+btnSort.addEventListener('click', function (e) {
+  e.preventDefault();
+  displayMovements(currentAccount, !sorted);
+  sorted = !sorted;
+});
+
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+// LECTURES
+//in js all numbers are represented internally
+//as floating point number
+//ex:
+/*
+console.log(23===23.0);
+//convert string to number
+console.log(+'23');
+//parsing
+console.log(Number.parseInt('30px'),10);//works
+//only if the string starts with a number
+//second parameter is radix(base)
+console.log(Number.parseInt('e23'));//NaN o/p
+console.log(Number.parseFloat('  2.5rem  '));
+console.log(Number.parseInt('  2.5rem  '));
+//not a number
+console.log(Number.isNaN(20));//checks
+//not  a number property
+//Checking a value is number or not
+console.log(Number.isFinite(20/0));
+console.log(Number.isInteger(23));
+console.log(Number.isInteger(23.0));//true in Java script
+//--------------------------------Math Rounding--
+console.log(Math.sqrt(4));
+console.log(Math.max(5,18,'23'));//does typr coercion but not parsing
+//similarly min also works
+console.log(Math.max(5,18,'23px'));
+console.log(Math.PI*Number.parseFloat('10px')**2);
+console.log(Math.trunc(Math.random()*6)+1);
+//generate random number in a range
+const randomInt=(min,max)=>Math.floor(Math.random()*(max-min)+1)+min;
+console.log(randomInt(10,20));
+//---------------------Rounding Integers------
+console.log(Math.trunc(23.3));
+console.log(Math.round(23.9));
+console.log(Math.ceil(23.3));
+console.log(Math.ceil(23.9));
+console.log(Math.floor(23.3));
+console.log(Math.floor(-23.3));
+//-----rounding decimals
+console.log((2.7).toFixed(0));
+console.log((2.7).toFixed(3));//number of decimal places to be rounded
+console.log(+(2.35).toFixed(2));
+//----------------Remainder operator--------------
+console.log(5%2);
+//-------------------------Big Int(premitive data type)-----------------------
+console.log(Number.MAX_SAFE_INTEGER);//any number larger than this can not be represented
+console.log(234736473646348374837487384783748374837487384783483748374);
+console.log(234736473646348374837487384783748374837487384783483748374n);//at the end n is added to indicate Big int
+console.log(BigInt(234736473646348374837487384783748374837487384783483748374));//BigInt function()
+//-----------------operations on BigIntegers-----------------
+console.log(10000n+1000n);
+//we cannot mix normal numbers with BigIntegers
+//ex:
+//console.log(3409823490238094293492398423840283402384n*23);//Error in the console saying 
+//cant mix with BigIntegers
+console.log(3409823490238094293492398423840283402384n*BigInt(23));
+console.log(20n>15);//
+console.log(20n===20);//False as they are different primitive types
+console.log(20n==20);
+console.log(20n=='20');//doest do type coerciosn true output
+console.log(34092349823489234989283498234908230948+'is really big');
+//sqrt doesnot work
+
+//Divisions
+console.log(10n/3n);
+console.log(10/3);
+//----------------------------Dates and Times---------------------------
+//Create a Date
+//4 ways of creating Date!!!!
+const now=new Date();
+console.log(now);
+//parse date from date string
+console.log(new Date('Jan 30 2021 22:27:27'));
+console.log(new Date(account1.movementsDates[0]));
+console.log(new Date(2037,10,19,15,23,5));
+//js auto corrects dates
+//ex:
+console.log(new Date(2037,10,33));//corrects to the 
+//next date
+console.log(new Date(0));//amount of milliseconds passed
+//since the beginig of the Unix time
+//---------working with dates------
+const future=new Date(2037,10,19,15,23);
+console.log(future);
+console.log(future.getFullYear());
+console.log(future.getMonth());
+console.log(future.getDay());
+console.log(future.getMinutes());
+console.log(future.getSeconds());
+console.log(future.getHours());
+console.log(future.toISOString());
+//get Timestamp
+console.log(future.getTime());//number of miliseconds
+//passed since 1970
+console.log(new Date(2142237180000));
+console.log(Date.now());//current time stamp
+future.setFullYear(2040);//change the future year from 2037
+//to 2040
+console.log(future);
+*/
+//--------------Operations on Dates-------------
+//find number of days passsed between dates
+//const future=new Date(2037,10,19,15,23);
+const calcDaysPassed=(date1,date2)=>Math.abs(date2-date1);
+const days1=calcDaysPassed(new Date(2037,3,14),new Date(2037,3,24));
+console.log(days1/(1000*60*60*24));
+//---------------Internationalization for formating numbers-----------
+const options={
+  style:'currency',   //currency,percent
+  unit:'celsius', //celcius
+  currency:'EUR',//currency is not determined by locale string
+  //useGrouping:false,//without the separators the number is printed
+}
+//const num=388898459.23;
+//console.log('US: ',new Intl.NumberFormat('en-US',options).format(num));
+//console.log('Germany: ',new Intl.NumberFormat('de-DE',options).format(num));
+//-------------------Timers---------------
+//settimeout(runs only once for defined time),settimeinterval(runs forever untill we stop it)
+const ing=['olive','spinac']
+const pizzaTimer=setTimeout((in1,in2)=>console.log(`here is our pizza with ingrediants ${in1} and ${in2}`),3000,...ing)//call back function called after a time (second argument passed to setTimeout)
+console.log('waiting');//ex to prove that code excecution doesnt stop for timeout timer
+//(Asynchronous JS property)
+//here call back executed only once
+//gives output after a defined time
+//arguments passed after miliseconds are the actual arguments to call back function
+//deleting the timer
+if(ing.includes('spinach'))clearTimeout(pizzaTimer);
+//----------------------------------------------------------setInterval----------------------
+//callback executed over and over
+/*
+setInterval(function(){
+  const now=new Date();
+  const time=`${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
+  console.log(`current time is ${time}`);
+},1000)
+*/
+//--------------Impimenting 10min counting timer--------
+const temp=new Date();
+const temp_min=(+temp.getMinutes());
+const temp_sec=(+temp.getSeconds());
+//console.log(temp_min,temp_sec);
+
